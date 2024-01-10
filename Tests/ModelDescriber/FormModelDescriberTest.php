@@ -6,10 +6,8 @@ use Doctrine\Common\Annotations\Reader;
 use Nelmio\ApiDocBundle\Model\Model;
 use Nelmio\ApiDocBundle\Model\ModelRegistry;
 use Nelmio\ApiDocBundle\ModelDescriber\FormModelDescriber;
-use Nelmio\ApiDocBundle\Tests\ModelDescriber\Fixtures\CsrfEnablingFormType;
 use OpenApi\Annotations\Property;
 use OpenApi\Attributes\OpenApi;
-use OpenApi\Attributes\Schema;
 use OpenApi\Generator;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Form\Extension\Core\Type\FormType;
@@ -47,14 +45,13 @@ class FormModelDescriberTest extends TestCase
 
         $api = new OpenApi();
         $model = new Model(new Type(Type::BUILTIN_TYPE_OBJECT, false, FormType::class));
-        $schema = new Schema();
+        $schema = $this->initSchema();
         $modelRegistry = new ModelRegistry([], $api);
 
-        $describer = new FormModelDescriber($formFactoryMock, $annotationReader, []);
+        $describer = new FormModelDescriber($formFactoryMock, $annotationReader, [], false, true);
         $describer->setModelRegistry($modelRegistry);
 
         $describer->describe($model, $schema);
-
 
         if ($expectProperty) {
             $filteredProperties = array_filter($schema->properties, function (Property $property) use ($tokenName) {
@@ -74,5 +71,14 @@ class FormModelDescriberTest extends TestCase
             [true, '_another_token', true],
             [false, '_token', false],
         ];
+    }
+
+    private function initSchema(): \OpenApi\Annotations\Schema
+    {
+        if (PHP_VERSION_ID < 80000) {
+            return new \OpenApi\Annotations\Schema([]);
+        }
+
+        return new \OpenApi\Attributes\Schema(); // union types, used in schema attribute require PHP >= 8.0.0
     }
 }
